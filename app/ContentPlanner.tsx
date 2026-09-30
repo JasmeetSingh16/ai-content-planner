@@ -4,7 +4,7 @@ import { ArrowRight, CalendarDays, RotateCcw, Sparkles, TriangleAlert } from "lu
 import { useRef, useState } from "react";
 import { EmptyPreview, WorkspaceSection } from "../components/agent/AgentTemplate";
 import { CopyButton, LoadingSteps } from "../components/agent/AgentUi";
-import ReportGate, { ReportCta } from "../components/agent/ReportGate";
+import ReportGate, { GoogleReturn, ReportCta } from "../components/agent/ReportGate";
 import type { ReportGateInfo } from "../lib/lead-gate";
 import {
   examplePlan,
@@ -208,6 +208,25 @@ export default function ContentPlanner() {
       <p className="jk-sr" role="status">
         {hasResult ? "Content plan ready." : ""}
       </p>
+
+      {/* Back from "Continue with Google": unlock the saved report. */}
+
+      <GoogleReturn
+
+        agent="content-planner"
+
+        onFull={(full) => {
+
+          const report = full as ContentReport;
+              setPlan(report.plan || []);
+              setPosts(report.posts || []);
+
+          setGate(null);
+
+        }}
+
+      />
+
 
       <div ref={outputRef} className="cp-output">
         {loading ? (
