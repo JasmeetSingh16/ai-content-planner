@@ -1,5 +1,7 @@
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
+import { gateReport } from "../../../lib/report-gate";
+import { inputOf, previewOf, summaryOf } from "../../report-gate";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -404,10 +406,18 @@ Return ONLY the finished social media post.
     // RETURN RESULTS
     // ==========================================
 
-    return NextResponse.json({
-      plan,
-      posts,
-    });
+    // Preview + sealed full plan (see lib/report-gate.ts).
+    const report = { plan, posts };
+
+    return NextResponse.json(
+      gateReport({
+        agent: "content-planner",
+        input: inputOf({ description: String(description), tone: String(tone), days: requestedDays }),
+        summary: summaryOf(report),
+        full: report,
+        preview: previewOf(report),
+      })
+    );
   } catch (error) {
     console.error("AGENT ERROR:", error);
 
