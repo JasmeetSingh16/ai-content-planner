@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarDays, LockKeyhole, RotateCcw, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowRight, CalendarDays, RotateCcw, Sparkles, TriangleAlert } from "lucide-react";
 import { useRef, useState } from "react";
 import { EmptyPreview, WorkspaceSection } from "../components/agent/AgentTemplate";
 import { CopyButton, LoadingSteps } from "../components/agent/AgentUi";
@@ -15,7 +15,7 @@ import {
   type PlanItem,
   type PostItem,
 } from "./content-data";
-import { PREVIEW_POSTS, inputOf, previewOf, summaryOf, type ContentReport } from "./report-gate";
+import { inputOf, summaryOf, type ContentReport } from "./report-gate";
 
 const LOADING_STEPS = ["Reading your brief", "Choosing themes & platforms", "Planning the calendar", "Writing each post"];
 
@@ -30,6 +30,7 @@ export default function ContentPlanner() {
   const [gate, setGate] = useState<ReportGateInfo | null>(null);
   // The brief as it was submitted (the fields stay editable afterwards).
   const [submitted, setSubmitted] = useState("");
+  const [submittedDays, setSubmittedDays] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -86,6 +87,7 @@ export default function ContentPlanner() {
       setPosts(data.posts || []);
       setGate(data.gate ?? null);
       setSubmitted(inputOf({ description, tone, days }));
+      setSubmittedDays(days);
     } catch (err) {
       console.error(err);
 
@@ -104,7 +106,7 @@ export default function ContentPlanner() {
     formRef.current?.scrollIntoView({ block: "start" });
   }
 
-  const hasResult = !loading && (plan.length > 0 || posts.length > 0);
+  const hasResult = !loading && (plan.length > 0 || posts.length > 0 || gate !== null);
 
   return (
     <WorkspaceSection
@@ -214,12 +216,20 @@ export default function ContentPlanner() {
           </div>
         ) : hasResult ? (
           <>
-            <ContentCalendar
-              plan={plan}
-              posts={gate ? previewOf({ plan, posts }).posts : posts}
-              onReset={reset}
-              locked={Boolean(gate)}
-            />
+            {gate ? (
+              <header className="cp-report-head">
+                <div>
+                  <p className="jk-eyebrow">Content calendar</p>
+                  <h3 className="cp-report-title">Your {submittedDays}-day content plan is ready</h3>
+                </div>
+                <button type="button" className="jk-copy" onClick={reset}>
+                  <RotateCcw size={15} aria-hidden="true" />
+                  Plan something else
+                </button>
+              </header>
+            ) : (
+              <ContentCalendar plan={plan} posts={posts} onReset={reset} />
+            )}
             {gate ? (
               <ReportGate
                 agent="content-planner"
@@ -235,8 +245,12 @@ export default function ContentPlanner() {
                   setGate(null);
                 }}
               >
-                {/* Sealed plans aren't in the page yet: blur example posts instead. */}
-                <LockedPosts posts={(gate.token ? examplePosts : posts).slice(PREVIEW_POSTS)} />
+                {/* Sealed plans aren't in the page yet: blur the example calendar instead. */}
+                {gate.token ? (
+                  <ContentCalendar plan={examplePlan} posts={examplePosts} />
+                ) : (
+                  <ContentCalendar plan={plan} posts={posts} />
+                )}
               </ReportGate>
             ) : (
               <ReportCta />
@@ -259,17 +273,14 @@ export default function ContentPlanner() {
 /* CALENDAR + POST PANEL                                               */
 /* ------------------------------------------------------------------ */
 
-/** `locked`: only the first posts are written out; the rest wait for the email form. */
 function ContentCalendar({
   plan,
   posts,
   onReset,
-  locked = false,
 }: {
   plan: PlanItem[];
   posts: PostItem[];
   onReset?: () => void;
-  locked?: boolean;
 }) {
   const days = plan.length ? plan : posts.map(({ day, theme, platform }) => ({ day, theme, platform }));
   const [selected, setSelected] = useState(days[0]?.day ?? 1);
@@ -289,12 +300,12 @@ function ContentCalendar({
         <div>
           <p className="jk-eyebrow">Content calendar</p>
           <h3 className="cp-report-title">
-            {days.length} days · {locked ? days.length : posts.length} posts written
+            {days.length} days · {posts.length} posts written
           </h3>
         </div>
         {onReset && (
           <div className="flex flex-wrap gap-2">
-            {posts.length > 0 && !locked && <CopyButton text={allText} label="Copy all posts" />}
+            {posts.length > 0 && <CopyButton text={allText} label="Copy all posts" />}
             <button type="button" className="jk-copy" onClick={onReset}>
               <RotateCcw size={15} aria-hidden="true" />
               Plan something else
@@ -364,11 +375,6 @@ function ContentCalendar({
           <h4 className="mt-3 text-xl font-bold tracking-tight text-[var(--jk-ink)]">{planItem?.theme}</h4>
           {post ? (
             <p className="cp-copy">{post.copy}</p>
-          ) : locked ? (
-            <p className="mt-4 flex items-center gap-2 text-sm text-[var(--jk-muted)]">
-              <LockKeyhole size={15} aria-hidden="true" />
-              Get your full report below to read this post.
-            </p>
           ) : (
             <p className="mt-4 text-sm text-[var(--jk-muted)]">No post was written for this day.</p>
           )}
@@ -380,24 +386,5 @@ function ContentCalendar({
         publishing.
       </p>
     </article>
-  );
-}
-
-/** The posts after the preview, as a list (shown blurred behind the email form). */
-function LockedPosts({ posts }: { posts: PostItem[] }) {
-  return (
-    <ol className="grid gap-4">
-      {posts.map((post) => (
-        <li key={post.day} className="jk-card cp-post">
-          <p className="flex items-center gap-2 text-sm font-semibold text-[var(--jk-ink)]">
-            <CalendarDays size={16} aria-hidden="true" className="text-[var(--agent-accent)]" />
-            Day {post.day}
-            <span className="text-[var(--jk-muted)]">· {post.platform}</span>
-          </p>
-          <h4 className="mt-3 text-xl font-bold tracking-tight text-[var(--jk-ink)]">{post.theme}</h4>
-          <p className="cp-copy">{post.copy}</p>
-        </li>
-      ))}
-    </ol>
   );
 }

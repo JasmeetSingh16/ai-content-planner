@@ -8,12 +8,9 @@ import type { PlanItem, PostItem } from "./content-data";
 
 export type ContentReport = { plan: PlanItem[]; posts: PostItem[] };
 
-/** Posts written out in full in the preview. */
-export const PREVIEW_POSTS = 2;
-
-/** The whole calendar (themes + platforms), with the first two posts written out. */
-export function previewOf(report: ContentReport): ContentReport {
-  return { plan: report.plan, posts: report.posts.slice(0, PREVIEW_POSTS) };
+/** Nothing — the whole plan is locked until the form is sent. */
+export function previewOf(): ContentReport {
+  return { plan: [], posts: [] };
 }
 
 export function inputOf({ description, tone, days }: { description: string; tone: string; days: number }): string {

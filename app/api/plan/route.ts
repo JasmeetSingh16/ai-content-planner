@@ -415,7 +415,7 @@ Return ONLY the finished social media post.
         input: inputOf({ description: String(description), tone: String(tone), days: requestedDays }),
         summary: summaryOf(report),
         full: report,
-        preview: previewOf(report),
+        preview: previewOf(),
       })
     );
   } catch (error) {
